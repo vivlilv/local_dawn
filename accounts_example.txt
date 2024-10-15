@@ -1,0 +1,9 @@
+Оформление:
+account_name:mail:mail_password:proxy:registered:refcode(не обязательно)
+Если аккаунт уже зарегестрирован то вместо registered True, иначе False
+
+Пример зарегестрированного аккаунта без реф кода и незарегистрированного с реф кодом
+
+Пример:
+SinMamki somemail@outlook.com mail_password http://login:password@23.129.254.246:6228 True
+BratMamki somemail@outlook.com mail_password http://login:password@23.129.254.246:6228 False referralCode

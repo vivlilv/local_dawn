@@ -9,15 +9,13 @@ users_api_keys = db[SETTINGS['USERS_API_KEYS']]
 
 async def print_db_entries():
     cursor = users_api_keys.find({})
-    print("Записи в базі даних:")
+    print("Entries in DB:")
     async for document in cursor:
         print(document)
 
 async def get_api_key_for_account(owner_id):
     try:
         user_api_key = await users_api_keys.find_one({'user_id': str(owner_id)})
-        print(owner_id)
-        print(f"KEY: {user_api_key['api_key']}")
         if not user_api_key or 'api_key' not in user_api_key:
             raise ValueError(f"API key not found for user {owner_id}")
         
@@ -45,9 +43,7 @@ async def solve_captcha(img_base64, owner_id):
 
         response = await client.post(url, json=data)
         data = response.json()
-        print(data)
         
-        #waiting for solution
         time.sleep(10)
         task_id = data.get('taskId')
         params = {
@@ -58,7 +54,6 @@ async def solve_captcha(img_base64, owner_id):
         result = await client.post(url='https://api.capmonster.cloud/getTaskResult', json=params)
         solution = result.json().get('solution', {}).get('text')
         
-        print(solution)
         return solution
 
 

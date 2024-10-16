@@ -1,5 +1,4 @@
 from motor.motor_asyncio import AsyncIOMotorClient
-import pandas as pd
 import logging
 from typing import List, Dict, Tuple
 import asyncio
@@ -310,25 +309,19 @@ async def delete_entries_with_null_token():
         raise
 
 async def update_registration_fields():
+    # Read proxies from the file
+    with open('proxies.txt', 'r') as file:
+        proxies = [line.strip() for line in file if line.strip()]
+
     # Update registration_failed based on proxy and registration status
     result = await collection.update_many(
         {},
         [
             {
                 '$set': {
-                    'registration_failed': {
-                        '$cond': [
-                            {'$regexMatch': {'input': '$proxy', 'regex': '^http://yk'}},
-                            False,  # Reset to False if proxy starts with http://yk
-                            {'$cond': [
-                                {'$eq': ['$registered', False]},
-                                True,  # Set to True if not registered
-                                False  # Otherwise, keep it unchanged
-                            ]}
-                        ]
-                    },
                     'registration_attempts': 0,
                     'verification_attempts': 0,
+                    'proxy': random.choice(proxies)  # Set proxy to a random one from the list
                 }
             }
         ]
@@ -368,5 +361,5 @@ async def renew_key():
 if __name__ == "__main__":
     # asyncio.run(inspect_field_types())
     # asyncio.run(update_registration_fields())
-    asyncio.run(renew_key())
-    # asyncio.run(print_db_entries())
+    # asyncio.run(renew_key())
+    asyncio.run(print_db_entries())

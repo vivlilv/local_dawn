@@ -30,10 +30,8 @@ LOG_COLORS = {
 
 class CustomFormatter(logging.Formatter):
     def format(self, record):
-        # Get the original message
         log_msg = super().format(record)
         
-        # Apply color based on the log level
         log_color = LOG_COLORS.get(record.levelname, LOG_COLORS['RESET'])
         return f"{log_color}{log_msg}{LOG_COLORS['RESET']}"
 
@@ -165,10 +163,10 @@ class AccountsManager:
             logging.info(f"Starting to process registration queue. Queue size: {len(self.registration_queue)}")
             while self.registration_queue and len(self.currently_registering) < self.max_simultaneous_registrations:
                 account = self.registration_queue.popleft()
-                if not account['registration_failed']:
-                    self.currently_registering.add(account['_id'])
+                if not account.account_details['registration_failed']:
+                    self.currently_registering.add(account.account_details['_id'])
                     tasks.append(asyncio.create_task(self.register_and_handle(account)))
-                    logging.info(f"Added account {account['name']} to registration tasks. Currently registering: {len(self.currently_registering)}")
+                    logging.info(f"Added account {account.account_details['name']} to registration tasks. Currently registering: {len(self.currently_registering)}")
                 else:
                     logging.warning(f"Skipping registration for failed account: {account['name']}")
             
@@ -182,17 +180,17 @@ class AccountsManager:
     async def register_and_handle(self, account):
         try:
             delay = random.uniform(1, SETTINGS['REGISTRATION_THREADS']*3)
-            logging.info(f"Sleeping for {delay} seconds before next registration cycle for {account['mail']}")
+            logging.info(f"Sleeping for {delay} seconds before next registration cycle for {account.account_details['mail']}")
             await asyncio.sleep(delay)
             await account.full_registration()
         finally:
-            self.currently_registering.remove(account['_id'])
-            if account['registered'] and account['verified']:
+            self.currently_registering.remove(account.account_details['_id'])
+            if account.account_details['registered'] and account.account_details['verified']:
                 await account.start_task()
 
     async def update_registration_attempt(self, account, status):
         await self.collection.update_one(
-            {'_id': account['_id']},
+            {'_id': account.account_details['_id']},
             {'$set': {'registration_attempt': status}}
         )
 
@@ -205,7 +203,7 @@ class AccountsManager:
 
         async def renew_token(acc):
             async with semaphore:
-                account_id = acc['_id']
+                account_id = acc.account_details['_id']
                 if account_id in self.active_accounts:
                     account = self.active_accounts[account_id]
                 else:
@@ -239,7 +237,7 @@ class AccountsManager:
             # logging.info("Running active registered accounts")
             logging.info("Processing registration queue")
             asyncio.create_task(self.run_active_registered_accounts())
-            # asyncio.create_task(self.process_registration_queue())
+            asyncio.create_task(self.process_registration_queue())
             
             while True:
                 if self.shutdown_event.is_set():
@@ -269,28 +267,27 @@ class Account:
         self.task = None
         self.session: Optional[aiohttp.ClientSession] = None
 
+    
+
     async def create_session(self):
         if self.session is None or self.session.closed:
-            proxy = self.account_details.get('proxy')
+            logging.warning(self.account_details['proxy'])
+            proxy = self.account_details['proxy']
             connector = None
 
             if proxy:
                 try:
-                    # Create ProxyConnector, disabling SSL verification as instructed
                     connector = ProxyConnector.from_url(proxy, ssl=False)
                     logging.info(f"Using proxy: {proxy}")
                 except Exception as e:
-                    # Log error and return, avoiding fallback to real IP
                     logging.error(f"Failed to connect using proxy {proxy}: {e}")
-                    return  # Prevent session creation if proxy fails
+                    return
             
             if connector:
-                # Initialize aiohttp session with proxy connector
                 self.session = aiohttp.ClientSession(connector=connector)
-                # Set headers
                 self.session.headers.update({
                     "user-agent": self.account_details['user_agent'],
-                    "authorization": f"Bearer {self.account_details['token']}"
+                    "authorization": f"Berear {self.account_details['token']}"
                 })
                 logging.info("Session created successfully.")
         else:
@@ -323,23 +320,16 @@ class Account:
             "sec-fetch-site": "cross-site",
             "user-agent": self.account_details['user_agent']
         }
-        
-        
-        
         logging.info(f"Sending request to: {url}")
-        # logging.info(f"Headers: {json.dumps(headers, indent=2)}")
         
         try:
             self.session.headers.update(headers)
             async with self.session.get(url) as response:
                 logging.info(f"Response status: {response.status}")
-                # logging.info(f"Response headers: {json.dumps(dict(response.headers), indent=2)}")
-                
                 response.raise_for_status()
                 data = await response.json()
-                # logging.info(f"Response data: {json.dumps(data, indent=2)}")
-                
                 return data['puzzle_id']
+            
         except Exception as e:
             logging.error(f"Error in get_puzzle: {str(e)}")
             # logging.error(f"Account details: {json.dumps(self.account_details, indent=2, default=str)}")
@@ -456,7 +446,7 @@ class Account:
 
         try:
             async with self.session.get(url,headers=headers) as response:
-                print('*'*69)
+                print('*'*100)
                 logging.info(f"Response status: {response.status}")
                 if response.status<400:
                     data = await response.json()
@@ -469,10 +459,39 @@ class Account:
                     logging.info(f"Current points: {self.points}")
                     return data
                 else:
-                    logging.error(f'Failed with status: {response.status}')
+                    logging.error(f'Failed with status: {response.status}. Trying different proxy...')
+                    with open('proxies.txt', 'r') as f:
+                        lines = f.readlines()
+                        for i in range(len(lines)):
+                            proxy = lines[random.randrange(0, len(lines)-1)].strip()  # Get a random proxy
+                            result = await self.check_ip()
+                            if result != 1:  # if returns IP
+                                existing_account = await self.collection.find_one({'proxy': proxy})
+                                if existing_account is None:  # Proxy is not in use
+                                    self.account_details['proxy'] = proxy
+                                    await self.update_proxy_in_db(proxy)
+                                    
+                                    # Remove the used proxy from the file
+                                    lines.remove(f"{proxy}\n")  # Remove the selected proxy
+                                    with open('proxies.txt', 'w') as f_write:
+                                        f_write.writelines(lines)  # Write remaining proxies back to the file
+                                    break
+                                else:
+                                    logging.warning(f"Proxy {proxy} is already in use by another account.")
+                    
+                    await self.create_session()
+
         except Exception as e:
             logging.error(f"Error in get_user_referral_points: {str(e)}")
             raise
+    
+    async def update_proxy_in_db(self, proxy: str):
+        await self.collection.update_one(
+            {'_id': self.account_details['_id']},
+            {'$set': {'proxy': proxy}}
+        )
+        logging.info(f"Updated proxy in database for {self.account_details['mail']}: {proxy}")
+
 
     async def update_points_in_db(self, new_points: int):
         await self.collection.update_one(
@@ -509,7 +528,7 @@ class Account:
         async with self.session.post(url,headers=headers, json=body) as response:
             try:
                 if response.status>=400:
-                    logging.warning(response.headers['Content-Type'])
+                    logging.warning(f"{response.status}: {'Server error' if response.status>500 else 'Proxy issue'}")
                     if 'application/json' in response.headers['Content-Type']:
                         json_data = await response.json()
                         if json_data['message'] == 'Your app session expired, Please login again.':
@@ -628,10 +647,9 @@ class Account:
                         self.get_user_referral_points(),#THE PROBLEM OF PASSING INITIAL TOKEN
                         self.keep_alive_with_retry(),
                     )
-                except Exception as e:
-                    logging.error(f"Error during farming for {self.account_details['name']}: {e}", exc_info=True)
-                
-                # Introduce a random delay between 100 and 200 seconds
+                except Exception:
+                    pass
+
                 delay = random.uniform(100, 200)
                 logging.info(f"Sleeping for {delay} seconds before next farming cycle for {self.account_details['mail']}")
                 await asyncio.sleep(delay)
@@ -671,7 +689,7 @@ class Account:
                     return
             except Exception as e:
                 logging.error(f"Keep_alive error (attempt {attempt + 1}): {e}")
-            await asyncio.sleep(10)
+            await asyncio.sleep(15)
         logging.error("Failed to perform keep_alive after all attempts")
 
     async def update_token_in_db(self, token: str):
@@ -706,7 +724,8 @@ class Account:
                 return ip
         except Exception as e:
             logging.error(f"Error checking IP: {str(e)}")
-            return None
+            return 1
+
 
 if __name__ == "__main__":
     manager = AccountsManager()

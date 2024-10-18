@@ -1,0 +1,14 @@
+/home/vivliv/Desktop/softs_crypto/local_dawn_ext/src/local_dawn/my_desktop_app/linux/build/CMakeFiles/my_desktop_app.dir
+/home/vivliv/Desktop/softs_crypto/local_dawn_ext/src/local_dawn/my_desktop_app/linux/build/CMakeFiles/edit_cache.dir
+/home/vivliv/Desktop/softs_crypto/local_dawn_ext/src/local_dawn/my_desktop_app/linux/build/CMakeFiles/rebuild_cache.dir
+/home/vivliv/Desktop/softs_crypto/local_dawn_ext/src/local_dawn/my_desktop_app/linux/build/CMakeFiles/list_install_components.dir
+/home/vivliv/Desktop/softs_crypto/local_dawn_ext/src/local_dawn/my_desktop_app/linux/build/CMakeFiles/install.dir
+/home/vivliv/Desktop/softs_crypto/local_dawn_ext/src/local_dawn/my_desktop_app/linux/build/CMakeFiles/install/local.dir
+/home/vivliv/Desktop/softs_crypto/local_dawn_ext/src/local_dawn/my_desktop_app/linux/build/CMakeFiles/install/strip.dir
+/home/vivliv/Desktop/softs_crypto/local_dawn_ext/src/local_dawn/my_desktop_app/linux/build/flutter/CMakeFiles/flutter_assemble.dir
+/home/vivliv/Desktop/softs_crypto/local_dawn_ext/src/local_dawn/my_desktop_app/linux/build/flutter/CMakeFiles/edit_cache.dir
+/home/vivliv/Desktop/softs_crypto/local_dawn_ext/src/local_dawn/my_desktop_app/linux/build/flutter/CMakeFiles/rebuild_cache.dir
+/home/vivliv/Desktop/softs_crypto/local_dawn_ext/src/local_dawn/my_desktop_app/linux/build/flutter/CMakeFiles/list_install_components.dir
+/home/vivliv/Desktop/softs_crypto/local_dawn_ext/src/local_dawn/my_desktop_app/linux/build/flutter/CMakeFiles/install.dir
+/home/vivliv/Desktop/softs_crypto/local_dawn_ext/src/local_dawn/my_desktop_app/linux/build/flutter/CMakeFiles/install/local.dir
+/home/vivliv/Desktop/softs_crypto/local_dawn_ext/src/local_dawn/my_desktop_app/linux/build/flutter/CMakeFiles/install/strip.dir
